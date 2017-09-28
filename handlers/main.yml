@@ -2,3 +2,4 @@
 # handlers file for amq7
 - name: amq_restart
   shell: "{{ amq_user_home }}/{{ broker_name }}/bin/artemis-service restart"
+  become_user: "{{ amq_user }}"

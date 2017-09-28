@@ -73,21 +73,24 @@
   become_user: "{{ amq_user }}"
   when: brokercheck.stat.isdir is not defined
 
-- name: adjust bootstrap.xml to make broker listen on 0.0.0.0 instead of localhost
-  lineinfile:
-    path: "{{ amq_user_home }}/{{ broker_name }}/etc/bootstrap.xml"
-    regexp: '<web bind="http://localhost:8161" path="web">'
-    line: '<web bind="http://0.0.0.0:8161" path="web">'
+- name: copy bootstrap.xml to make broker listen on 0.0.0.0 instead of localhost
+  copy:
+    src: files/bootstrap.xml
+    dest: "{{ amq_user_home }}/etc/bootstrap.xml"
+    owner: "{{ amq_user }}"
+    group: "{{ amq_group }}"
   notify:
   - amq_restart
 
 - name: is broker already running?
   shell: "{{ amq_user_home }}/{{ broker_name }}/bin/artemis-service status"
   register: brokerstatus
+  become_user: "{{ amq_user }}"
   failed_when: "'FAILED' in brokerstatus.stdout"
 
 - name: start broker if not already running
   shell: "{{ amq_user_home }}/{{ broker_name }}/bin/artemis-service start"
+  become_user: "{{ amq_user }}"
   when: brokerstatus.stdout.find('is running') == -1
 
 - name: is the service available?
