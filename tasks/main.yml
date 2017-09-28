@@ -1,0 +1,100 @@
+---
+# tasks file for amq7
+- name: install required packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - java
+  - maven
+  - unzip
+  - firewalld
+
+- name: start firewalld
+  service:
+    name: firewalld
+    state: started
+
+- name: open "{{ amq_broker_port }} and {{ amq_connector_port }}" on the firewall
+  firewalld:
+    port: "{{ item }}/tcp"
+    state: enabled
+    permanent: true
+    immediate: true
+  with_items:
+  - "{{ amq_broker_port }}"
+  - "{{ amq_connector_port }}"
+
+- name: create the amq user -- "{{ amq_user }}"
+  user:
+    name: "{{ amq_user }}"
+    state: present
+
+- name: create the amq group -- "{{ amq_group }}"
+  group:
+    name: "{{ amq_group }}"
+    state: present
+
+- name: push the tarball "{{ amq_tar }}" to remote host
+  copy:
+    src: "files/{{ amq_tar }}"
+    dest: "{{ amq_base_install_dir }}/"
+    owner: "{{ amq_user }}"
+    group: "{{ amq_group }}" 
+
+- name: unpack the tarball in "{{ amq_base_install_dir }}"
+  unarchive:
+    src: "{{ amq_base_install_dir}}/{{ amq_tar }}"
+    dest: "{{ amq_base_install_dir }}/"
+    owner: "{{ amq_user }}"
+    group: "{{ amq_group }}"
+
+- name: create a softlink to use in $AMQ_HOME var
+  file:
+    src: "{{ amq_base_install_dir }}/{{ amq_vers }}"
+    dest: "{{ amq_home_dir }}"
+    owner: "{{ amq_user }}"
+    group: "{{ amq_group }}"
+    state: link
+
+- name: add the $AMQ_HOME as an exported var to "{{ amq_user }}" ~/.bashrc
+  lineinfile:
+    path: "{{ amq_user_home }}/.bashrc"
+    line: "export AMQ_HOME={{ amq_home_dir }}"
+
+- name: does broker already exist?
+  stat: 
+    path: "{{ amq_user_home }}/{{ broker_name }}"
+  register: brokercheck
+  ignore_errors: true
+
+- name: create "{{ broker_name }}" broker if it hasn't been created
+  shell: "source ~/.bashrc; $AMQ_HOME/bin/artemis create {{ broker_name }} --user {{ broker_user }} --password {{ broker_password }} --allow-anonymous"
+  become_user: "{{ amq_user }}"
+  when: brokercheck.stat.isdir is not defined
+
+- name: adjust bootstrap.xml to make broker listen on 0.0.0.0 instead of localhost
+  lineinfile:
+    path: "{{ amq_user_home }}/{{ broker_name }}/etc/bootstrap.xml"
+    regexp: '<web bind="http://localhost:8161" path="web">'
+    line: '<web bind="http://0.0.0.0:8161" path="web">'
+  notify:
+  - amq_restart
+
+- name: is broker already running?
+  shell: "{{ amq_user_home }}/{{ broker_name }}/bin/artemis-service status"
+  register: brokerstatus
+  failed_when: "'FAILED' in brokerstatus.stdout"
+
+- name: start broker if not already running
+  shell: "{{ amq_user_home }}/{{ broker_name }}/bin/artemis-service start"
+  when: brokerstatus.stdout.find('is running') == -1
+
+- name: is the service available?
+  wait_for: 
+    port: "{{ amq_broker_port }}"
+    delay: 5
+
+- name: print status
+  debug:
+    msg: "ActiveMQ currently available at {{ inventory_hostname }}:{{ amq_broker_port }}"

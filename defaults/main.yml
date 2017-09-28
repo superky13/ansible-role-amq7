@@ -1,0 +1,22 @@
+---
+# defaults file for amq7
+amq_user: amq
+amq_group: amq
+amq_broker_port: 8161
+amq_connector_port: 61616
+
+# change to whatever username/password you'd like to use for hawtio auth
+broker_user: user
+broker_password: password
+
+# change to whatever name you'd like to assign to your broker/dir
+broker_name: default
+
+amq_base_install_dir: /opt
+amq_vers: amq-broker-7.0.2
+
+# replace with whatever version you pull down
+amq_tar: amq7.tar.gz
+
+amq_home_dir: /opt/amq
+amq_user_home: /home/amq
