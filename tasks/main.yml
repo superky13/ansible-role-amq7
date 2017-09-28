@@ -76,7 +76,7 @@
 - name: copy bootstrap.xml to make broker listen on 0.0.0.0 instead of localhost
   copy:
     src: files/bootstrap.xml
-    dest: "{{ amq_user_home }}/etc/bootstrap.xml"
+    dest: "{{ amq_user_home }}/{{ broker_name }}/etc/bootstrap.xml"
     owner: "{{ amq_user }}"
     group: "{{ amq_group }}"
   notify:
