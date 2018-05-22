@@ -1,0 +1,15 @@
+galaxy_info:
+  author: ky13
+  description: Install, configure, and start a single AMQ7 broker
+  license: BSD
+  min_ansible_version: 2.3
+  platforms:
+  - name: EL
+    versions:
+    - 7
+
+  galaxy_tags:
+    - messaging
+    - amq7
+
+dependencies: []
